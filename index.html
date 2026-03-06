@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>🍼 大福寶產檢紀錄小幫手 V4</title>
+    <title>🍼 大福寶產檢紀錄小幫手 V5</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
         :root { --primary: #ff8fa3; --bg: #fff0f3; --text: #590d22; --card-bg: #ffffff; --blue: #4ea8de; --edit: #f59e0b; }
@@ -16,15 +16,20 @@
         .name-input { text-align: center; margin-bottom: 15px; }
         .name-input input { font-size: 20px; text-align: center; border: none; border-bottom: 2px dashed var(--primary); background: transparent; color: var(--primary); font-weight: bold; outline: none; width: 200px; }
         
+        /* ✨ 新增：預產期倒數看板設計 ✨ */
+        .countdown-card { text-align: center; background: linear-gradient(135deg, #ffe5ec, #ffc2d1); border: 2px dashed var(--primary); }
+        .countdown-title { font-size: 16px; font-weight: bold; color: var(--text); margin-bottom: 5px; }
+        .countdown-number { font-size: 28px; font-weight: 900; color: #ff4d6d; text-shadow: 1px 1px 2px rgba(255,255,255,0.8); }
+        .countdown-sub { font-size: 14px; color: #800f2f; margin-top: 8px; font-weight: bold; }
+
         .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 15px; }
         .form-group { margin-bottom: 10px; }
         label { display: block; font-weight: bold; margin-bottom: 5px; font-size: 14px; }
         input, textarea { width: 100%; padding: 8px; border: 1px solid #ffccd5; border-radius: 8px; box-sizing: border-box; font-size: 14px; }
         
-        /* 按鈕群組設計 */
         .btn-group { display: flex; gap: 10px; }
         button.save-btn { background-color: var(--primary); color: white; border: none; padding: 12px; flex: 1; border-radius: 8px; font-size: 16px; font-weight: bold; cursor: pointer; transition: 0.3s; }
-        button.save-btn.edit-mode { background-color: var(--edit); } /* 編輯模式變成橘黃色 */
+        button.save-btn.edit-mode { background-color: var(--edit); } 
         button.cancel-btn { background-color: #94a3b8; color: white; border: none; padding: 12px; border-radius: 8px; font-size: 16px; font-weight: bold; cursor: pointer; display: none; }
         
         .info-card { background-color: #fff9fa; border-left: 5px solid var(--primary); padding: 15px; border-radius: 8px; margin-bottom: 20px; font-size: 14px; }
@@ -38,7 +43,6 @@
         .thumb { width: 50px; height: 50px; object-fit: cover; border-radius: 5px; border: 1px solid #ffccd5; cursor: pointer; transition: 0.2s; }
         .thumb:hover { transform: scale(1.1); box-shadow: 0 2px 5px rgba(0,0,0,0.2); }
         
-        /* 表格內的操作按鈕 */
         .action-btns { display: flex; gap: 5px; }
         .edit-btn { background-color: var(--edit); color: white; border: none; padding: 6px 10px; border-radius: 5px; cursor: pointer; font-size: 12px; font-weight: bold; }
         .delete-btn { background-color: #ff4d4d; color: white; border: none; padding: 6px 10px; border-radius: 5px; cursor: pointer; font-size: 12px; font-weight: bold; }
@@ -57,6 +61,12 @@
     
     <div class="name-input">
         <input type="text" id="baby-name" placeholder="點此輸入寶寶小名" value="大福寶" onchange="saveBabyName()">
+    </div>
+
+    <div class="card countdown-card">
+        <div class="countdown-title">📅 預產期：2026 年 07 月 28 日</div>
+        <div class="countdown-number">目前 <span id="current-week">--</span> 週 <span id="current-day">--</span> 天</div>
+        <div class="countdown-sub">🎉 距離大福寶誕生大約還有 <span id="days-left">--</span> 天</div>
     </div>
 
     <div class="info-card" id="health-info" style="display: none;">
@@ -137,10 +147,50 @@
 <script>
     let babyRecords = JSON.parse(localStorage.getItem('babyRecords')) || [];
     let growthChartInstance = null;
-    let editingId = null; // 🚀 新增：用來記錄現在正在編輯哪一筆資料
+    let editingId = null; 
 
     document.getElementById('baby-name').value = localStorage.getItem('babyName') || '大福寶';
     function saveBabyName() { localStorage.setItem('babyName', document.getElementById('baby-name').value); }
+
+    // ==========================================
+    // 🚀 新增功能：全自動預產期與週數計算
+    // ==========================================
+    function calculatePregnancyInfo() {
+        // 設定預產期 (年-月-日)
+        const eddDate = new Date('2026-07-28T00:00:00');
+        
+        // 取得今天的日期，並將時間歸零，確保以「天」為單位計算準確
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        
+        // 計算差距的毫秒數，並轉換成「天數」
+        const diffTime = eddDate.getTime() - today.getTime();
+        const daysLeft = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+        
+        // 懷孕總天數為 280 天 (40週)，用 280 減去剩下的天數，就是「已經懷孕的天數」
+        const elapsedDays = 280 - daysLeft;
+        
+        // 如果已經卸貨了或日期超過預產期
+        if (daysLeft <= 0) {
+            document.getElementById('current-week').innerText = "40+";
+            document.getElementById('current-day').innerText = "0";
+            document.getElementById('days-left').innerText = "0 (大福寶已經來報到啦！)";
+            return;
+        }
+
+        // 換算成週數與天數 (例如 136 天 / 7 = 19週...餘3天)
+        const currentWeek = Math.floor(elapsedDays / 7);
+        const currentDay = elapsedDays % 7;
+        
+        // 將計算結果顯示在畫面上
+        document.getElementById('current-week').innerText = currentWeek;
+        document.getElementById('current-day').innerText = currentDay;
+        document.getElementById('days-left').innerText = daysLeft;
+    }
+    // 網頁一載入就執行計算
+    calculatePregnancyInfo();
+    // ==========================================
+
 
     function getHealthAdvice(week) {
         if (week <= 12) return "<b>👶 寶寶狀態：</b>主要器官正在成形，心跳已經可以聽到囉！<br><b>👩 媽咪建議：</b>處於第一孕期，可能會孕吐或疲倦。記得多休息，並持續補充「葉酸」。";
@@ -168,15 +218,13 @@
         reader.readAsDataURL(file);
     }
 
-    // 表單送出 (現在支援「新增」與「更新」兩種模式)
     document.getElementById('record-form').addEventListener('submit', function(e) {
         e.preventDefault();
         const fileInput = document.getElementById('photo');
 
-        // 建立一個處理儲存邏輯的函數
         const saveData = (photoData) => {
             const recordData = {
-                id: editingId ? editingId : Date.now(), // 如果在編輯就用原ID，否則產生新ID
+                id: editingId ? editingId : Date.now(), 
                 date: document.getElementById('date').value,
                 week: parseInt(document.getElementById('week').value),
                 weight: document.getElementById('weight').value,
@@ -186,67 +234,50 @@
             };
 
             if (editingId) {
-                // 🔄 更新模式：找到原本的資料並替換掉
                 const index = babyRecords.findIndex(r => r.id === editingId);
                 babyRecords[index] = recordData;
-                alert('✅ 紀錄更新成功！');
             } else {
-                // ➕ 新增模式
                 babyRecords.push(recordData);
-                alert('✅ 紀錄儲存成功！');
             }
 
-            // 重新排序、存檔、更新畫面，然後解除編輯模式
             babyRecords.sort((a, b) => a.week - b.week); 
             localStorage.setItem('babyRecords', JSON.stringify(babyRecords));
             cancelEdit(); 
             updateUI();
         };
 
-        // 判斷是否有上傳新照片
         if (fileInput.files[0]) {
             processImage(fileInput.files[0], saveData);
         } else {
-            // 如果沒上傳新照片
             let existingPhoto = "";
-            if (editingId) {
-                // 編輯模式下，抓取舊照片
-                existingPhoto = babyRecords.find(r => r.id === editingId).photo;
-            }
+            if (editingId) existingPhoto = babyRecords.find(r => r.id === editingId).photo;
             saveData(existingPhoto);
         }
     });
 
-    // ✨ 新增：啟動編輯模式 ✨
     function editRecord(recordId) {
-        editingId = recordId; // 記住現在正在編輯哪一筆
-        const record = babyRecords.find(r => r.id === recordId); // 找資料
+        editingId = recordId; 
+        const record = babyRecords.find(r => r.id === recordId); 
         
-        // 將資料塞回輸入框
         document.getElementById('date').value = record.date;
         document.getElementById('week').value = record.week;
         document.getElementById('weight').value = record.weight;
         document.getElementById('head').value = record.head === '-' ? '' : record.head;
         document.getElementById('notes').value = record.notes;
-        document.getElementById('photo').value = ''; // 清空檔案選擇器
+        document.getElementById('photo').value = ''; 
 
-        // 改變 UI 外觀，提示正在編輯
         document.getElementById('form-title').innerText = `✏️ 正在編輯 第 ${record.week} 週的紀錄`;
         const submitBtn = document.getElementById('submit-btn');
         submitBtn.innerText = '🔄 更新紀錄';
         submitBtn.classList.add('edit-mode');
         document.getElementById('cancel-btn').style.display = 'block';
 
-        // 平滑捲動到最上方表單處
         document.getElementById('form-section').scrollIntoView({ behavior: 'smooth' });
     }
 
-    // ✨ 新增：取消編輯模式 ✨
     function cancelEdit() {
         editingId = null;
-        document.getElementById('record-form').reset(); // 清空表單
-        
-        // 恢復 UI 外觀
+        document.getElementById('record-form').reset(); 
         document.getElementById('form-title').innerText = '📝 新增產檢紀錄';
         const submitBtn = document.getElementById('submit-btn');
         submitBtn.innerText = '💾 儲存紀錄';
@@ -258,8 +289,6 @@
         if (confirm("確定要刪除這筆紀錄嗎？（刪除後無法復原喔）")) {
             babyRecords = babyRecords.filter(record => record.id !== recordId);
             localStorage.setItem('babyRecords', JSON.stringify(babyRecords));
-            
-            // 如果正在編輯被刪除的這筆，要取消編輯模式
             if (editingId === recordId) cancelEdit();
             updateUI();
         }
