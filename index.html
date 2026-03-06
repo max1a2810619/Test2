@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>🍼 寶寶產檢紀錄小幫手 V2</title>
+    <title>🍼 寶寶產檢紀錄小幫手 V3</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
         :root { --primary: #ff8fa3; --bg: #fff0f3; --text: #590d22; --card-bg: #ffffff; --blue: #4ea8de; }
@@ -23,8 +23,8 @@
         .form-group { margin-bottom: 10px; }
         label { display: block; font-weight: bold; margin-bottom: 5px; font-size: 14px; }
         input, textarea { width: 100%; padding: 8px; border: 1px solid #ffccd5; border-radius: 8px; box-sizing: border-box; font-size: 14px; }
-        button { background-color: var(--primary); color: white; border: none; padding: 12px; width: 100%; border-radius: 8px; font-size: 16px; font-weight: bold; cursor: pointer; }
-        button:hover { background-color: #ff4d6d; }
+        button.save-btn { background-color: var(--primary); color: white; border: none; padding: 12px; width: 100%; border-radius: 8px; font-size: 16px; font-weight: bold; cursor: pointer; }
+        button.save-btn:hover { background-color: #ff4d6d; }
 
         /* 衛教小卡 */
         .info-card { background-color: #fff9fa; border-left: 5px solid var(--primary); padding: 15px; border-radius: 8px; margin-bottom: 20px; font-size: 14px; }
@@ -32,12 +32,22 @@
 
         /* 表格設計 */
         .table-wrapper { overflow-x: auto; }
-        table { width: 100%; border-collapse: collapse; font-size: 13px; min-width: 500px; }
+        table { width: 100%; border-collapse: collapse; font-size: 13px; min-width: 550px; }
         th, td { padding: 8px; text-align: left; border-bottom: 1px solid #ffccd5; vertical-align: middle; }
         th { background-color: #ffb3c1; color: var(--text); white-space: nowrap; }
-        .thumb { width: 50px; height: 50px; object-fit: cover; border-radius: 5px; border: 1px solid #ffccd5; cursor: pointer; }
+        
+        /* 照片縮圖與刪除按鈕 */
+        .thumb { width: 50px; height: 50px; object-fit: cover; border-radius: 5px; border: 1px solid #ffccd5; cursor: pointer; transition: 0.2s; }
+        .thumb:hover { transform: scale(1.1); box-shadow: 0 2px 5px rgba(0,0,0,0.2); }
+        .delete-btn { background-color: #ff4d4d; color: white; border: none; padding: 6px 10px; border-radius: 5px; cursor: pointer; font-size: 12px; font-weight: bold; }
+        .delete-btn:hover { background-color: #cc0000; }
         
         .chart-container { position: relative; height: 300px; width: 100%; }
+
+        /* 照片放大視窗 (Modal) */
+        .modal { display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.8); align-items: center; justify-content: center; }
+        .modal-content { max-width: 90%; max-height: 90%; border-radius: 10px; border: 3px solid white; box-shadow: 0 0 20px rgba(0,0,0,0.5); }
+        .close-btn { position: absolute; top: 15px; right: 25px; color: white; font-size: 35px; font-weight: bold; cursor: pointer; }
     </style>
 </head>
 <body>
@@ -85,7 +95,7 @@
                 <label>🩺 醫生備註</label>
                 <textarea id="notes" rows="2" placeholder="紀錄一下醫生的叮嚀或當下的心情..."></textarea>
             </div>
-            <button type="submit">💾 儲存紀錄</button>
+            <button type="submit" class="save-btn">💾 儲存紀錄</button>
         </form>
     </div>
 
@@ -107,7 +117,7 @@
                         <th>頭圍(cm)</th>
                         <th>照片</th>
                         <th>備註</th>
-                    </tr>
+                        <th>操作</th> </tr>
                 </thead>
                 <tbody id="history-list"></tbody>
             </table>
@@ -115,12 +125,17 @@
     </div>
 </div>
 
+<div id="imageModal" class="modal" onclick="closeModal()">
+    <span class="close-btn">&times;</span>
+    <img class="modal-content" id="expandedImg">
+</div>
+
 <script>
     // 取得資料
     let babyRecords = JSON.parse(localStorage.getItem('babyRecords')) || [];
     let growthChartInstance = null;
 
-    // 載入寶寶名字，如果瀏覽器沒存過，就預設給 '大福寶'
+    // 載入寶寶名字
     document.getElementById('baby-name').value = localStorage.getItem('babyName') || '大福寶';
 
     function saveBabyName() {
@@ -129,9 +144,9 @@
 
     // 衛教資訊資料庫
     function getHealthAdvice(week) {
-        if (week <= 12) return "<b>👶 寶寶狀態：</b>主要器官正在成形，心跳已經可以聽到囉！<br><b>👩 媽咪建議：</b>處於第一孕期，可能會孕吐或疲倦。記得多休息，並持續補充「葉酸」幫助寶寶神經發育。";
-        if (week <= 28) return "<b>👶 寶寶狀態：</b>聽覺開始發展，骨骼變硬，媽咪會開始感受到明顯的胎動！<br><b>👩 媽咪建議：</b>進入最舒適的第二孕期。可以開始跟寶寶說話，並補充「鈣質」與「鐵質」，也可安排適度的孕婦運動。";
-        if (week <= 40) return "<b>👶 寶寶狀態：</b>皮下脂肪快速增加，為出生做準備，胎動可能會因為空間變小而改變方式。<br><b>👩 媽咪建議：</b>第三孕期肚子變大，容易腰痠、頻尿。請注意胎動次數，並可以開始準備待產包囉！";
+        if (week <= 12) return "<b>👶 寶寶狀態：</b>主要器官正在成形，心跳已經可以聽到囉！<br><b>👩 媽咪建議：</b>處於第一孕期，可能會孕吐或疲倦。記得多休息，並持續補充「葉酸」。";
+        if (week <= 28) return "<b>👶 寶寶狀態：</b>聽覺開始發展，骨骼變硬，媽咪會開始感受到明顯的胎動！<br><b>👩 媽咪建議：</b>進入第二孕期。可以開始跟寶寶說話，並補充「鈣質」與「鐵質」。";
+        if (week <= 40) return "<b>👶 寶寶狀態：</b>皮下脂肪快速增加，為出生做準備。<br><b>👩 媽咪建議：</b>肚子變大容易腰痠。請注意胎動次數，並可以開始準備待產包囉！";
         return "<b>👶 寶寶狀態：</b>隨時準備好要跟大福寶見面啦！<br><b>👩 媽咪建議：</b>保持放鬆心情，隨時注意產兆（落紅、破水、陣痛）。";
     }
 
@@ -143,13 +158,13 @@
             const img = new Image();
             img.onload = function() {
                 const canvas = document.createElement('canvas');
-                const MAX_WIDTH = 300; 
+                const MAX_WIDTH = 400; // 稍微調高畫質讓放大後更清楚
                 const scaleSize = MAX_WIDTH / img.width;
                 canvas.width = MAX_WIDTH;
                 canvas.height = img.height * scaleSize;
                 const ctx = canvas.getContext('2d');
                 ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-                callback(canvas.toDataURL('image/jpeg', 0.6)); 
+                callback(canvas.toDataURL('image/jpeg', 0.7)); 
             }
             img.src = e.target.result;
         }
@@ -163,7 +178,7 @@
         const fileInput = document.getElementById('photo');
         processImage(fileInput.files[0], function(base64Image) {
             const newRecord = {
-                id: Date.now(),
+                id: Date.now(), // 給這筆紀錄一個唯一的身份證字號，方便之後刪除
                 date: document.getElementById('date').value,
                 week: parseInt(document.getElementById('week').value),
                 weight: document.getElementById('weight').value,
@@ -178,11 +193,37 @@
 
             document.getElementById('record-form').reset();
             updateUI();
-            alert('✅ 紀錄與照片儲存成功！');
         });
     });
 
-    // 更新介面
+    // ✨ 新增：刪除紀錄功能 ✨
+    function deleteRecord(recordId) {
+        // 跳出防呆確認視窗
+        const isConfirmed = confirm("確定要刪除這筆紀錄嗎？（刪除後無法復原喔）");
+        
+        if (isConfirmed) {
+            // 過濾掉被刪除的那筆紀錄，保留其他的
+            babyRecords = babyRecords.filter(record => record.id !== recordId);
+            
+            // 重新存回瀏覽器
+            localStorage.setItem('babyRecords', JSON.stringify(babyRecords));
+            
+            // 更新畫面
+            updateUI();
+        }
+    }
+
+    // ✨ 新增：打開與關閉照片放大視窗 ✨
+    function openModal(imageSrc) {
+        document.getElementById('expandedImg').src = imageSrc;
+        document.getElementById('imageModal').style.display = 'flex'; // 顯示視窗
+    }
+
+    function closeModal() {
+        document.getElementById('imageModal').style.display = 'none'; // 隱藏視窗
+    }
+
+    // 更新介面總管
     function updateUI() {
         renderTable();
         renderChart();
@@ -191,9 +232,12 @@
 
     // 更新衛教卡
     function updateHealthCard() {
-        if (babyRecords.length === 0) return;
-        const latestRecord = babyRecords[babyRecords.length - 1]; 
         const card = document.getElementById('health-info');
+        if (babyRecords.length === 0) {
+            card.style.display = 'none';
+            return;
+        }
+        const latestRecord = babyRecords[babyRecords.length - 1]; 
         document.getElementById('info-week').innerText = latestRecord.week;
         document.getElementById('info-content').innerHTML = getHealthAdvice(latestRecord.week);
         card.style.display = 'block';
@@ -204,7 +248,8 @@
         const tbody = document.getElementById('history-list');
         tbody.innerHTML = ''; 
         babyRecords.forEach(record => {
-            const photoHtml = record.photo ? `<img src="${record.photo}" class="thumb" onclick="window.open('${record.photo}')" title="點擊放大">` : '無';
+            // 注意這裡改成了 onclick="openModal(...)"
+            const photoHtml = record.photo ? `<img src="${record.photo}" class="thumb" onclick="openModal('${record.photo}')" title="點擊放大">` : '無';
             const tr = document.createElement('tr');
             tr.innerHTML = `
                 <td>第 ${record.week} 週</td>
@@ -212,6 +257,7 @@
                 <td>${record.head}</td>
                 <td>${photoHtml}</td>
                 <td>${record.notes || '-'}</td>
+                <td><button class="delete-btn" onclick="deleteRecord(${record.id})">刪除</button></td>
             `;
             tbody.appendChild(tr);
         });
@@ -219,7 +265,10 @@
 
     // 繪製雙軸圖表
     function renderChart() {
-        if (babyRecords.length === 0) return;
+        if (babyRecords.length === 0) {
+            if (growthChartInstance) growthChartInstance.destroy();
+            return;
+        }
         const labels = babyRecords.map(r => `${r.week}W`);
         const weightData = babyRecords.map(r => r.weight);
         const headData = babyRecords.map(r => r.head === '-' ? null : r.head);
@@ -232,22 +281,8 @@
             data: {
                 labels: labels,
                 datasets: [
-                    {
-                        label: '體重 (g)',
-                        data: weightData,
-                        borderColor: '#ff4d6d',
-                        backgroundColor: 'rgba(255, 77, 109, 0.1)',
-                        yAxisID: 'y', 
-                        tension: 0.3, fill: true, pointRadius: 5
-                    },
-                    {
-                        label: '頭圍 (cm)',
-                        data: headData,
-                        borderColor: '#4ea8de', 
-                        backgroundColor: '#4ea8de',
-                        yAxisID: 'y1', 
-                        tension: 0.3, fill: false, pointRadius: 5, pointStyle: 'rectRot'
-                    }
+                    { label: '體重 (g)', data: weightData, borderColor: '#ff4d6d', backgroundColor: 'rgba(255, 77, 109, 0.1)', yAxisID: 'y', tension: 0.3, fill: true, pointRadius: 5 },
+                    { label: '頭圍 (cm)', data: headData, borderColor: '#4ea8de', backgroundColor: '#4ea8de', yAxisID: 'y1', tension: 0.3, fill: false, pointRadius: 5, pointStyle: 'rectRot' }
                 ]
             },
             options: {
