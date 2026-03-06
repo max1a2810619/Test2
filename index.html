@@ -3,48 +3,48 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>🍼 寶寶產檢紀錄小幫手 V3</title>
+    <title>🍼 大福寶產檢紀錄小幫手 V4</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
-        :root { --primary: #ff8fa3; --bg: #fff0f3; --text: #590d22; --card-bg: #ffffff; --blue: #4ea8de; }
+        :root { --primary: #ff8fa3; --bg: #fff0f3; --text: #590d22; --card-bg: #ffffff; --blue: #4ea8de; --edit: #f59e0b; }
         body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: var(--bg); color: var(--text); margin: 0; padding: 15px; line-height: 1.6; }
         .container { max-width: 650px; margin: 0 auto; }
         
         h1 { text-align: center; color: var(--primary); font-size: 24px; }
         .card { background: var(--card-bg); padding: 18px; border-radius: 15px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); margin-bottom: 20px; border: 2px solid #ffb3c1; }
         
-        /* 寶寶名字輸入 */
         .name-input { text-align: center; margin-bottom: 15px; }
         .name-input input { font-size: 20px; text-align: center; border: none; border-bottom: 2px dashed var(--primary); background: transparent; color: var(--primary); font-weight: bold; outline: none; width: 200px; }
-        .name-input input::placeholder { color: #ffccd5; }
-
-        /* 表單設計 */
+        
         .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 15px; }
         .form-group { margin-bottom: 10px; }
         label { display: block; font-weight: bold; margin-bottom: 5px; font-size: 14px; }
         input, textarea { width: 100%; padding: 8px; border: 1px solid #ffccd5; border-radius: 8px; box-sizing: border-box; font-size: 14px; }
-        button.save-btn { background-color: var(--primary); color: white; border: none; padding: 12px; width: 100%; border-radius: 8px; font-size: 16px; font-weight: bold; cursor: pointer; }
-        button.save-btn:hover { background-color: #ff4d6d; }
-
-        /* 衛教小卡 */
+        
+        /* 按鈕群組設計 */
+        .btn-group { display: flex; gap: 10px; }
+        button.save-btn { background-color: var(--primary); color: white; border: none; padding: 12px; flex: 1; border-radius: 8px; font-size: 16px; font-weight: bold; cursor: pointer; transition: 0.3s; }
+        button.save-btn.edit-mode { background-color: var(--edit); } /* 編輯模式變成橘黃色 */
+        button.cancel-btn { background-color: #94a3b8; color: white; border: none; padding: 12px; border-radius: 8px; font-size: 16px; font-weight: bold; cursor: pointer; display: none; }
+        
         .info-card { background-color: #fff9fa; border-left: 5px solid var(--primary); padding: 15px; border-radius: 8px; margin-bottom: 20px; font-size: 14px; }
         .info-title { font-weight: bold; color: var(--primary); font-size: 16px; margin-bottom: 8px; }
 
-        /* 表格設計 */
         .table-wrapper { overflow-x: auto; }
         table { width: 100%; border-collapse: collapse; font-size: 13px; min-width: 550px; }
         th, td { padding: 8px; text-align: left; border-bottom: 1px solid #ffccd5; vertical-align: middle; }
         th { background-color: #ffb3c1; color: var(--text); white-space: nowrap; }
         
-        /* 照片縮圖與刪除按鈕 */
         .thumb { width: 50px; height: 50px; object-fit: cover; border-radius: 5px; border: 1px solid #ffccd5; cursor: pointer; transition: 0.2s; }
         .thumb:hover { transform: scale(1.1); box-shadow: 0 2px 5px rgba(0,0,0,0.2); }
+        
+        /* 表格內的操作按鈕 */
+        .action-btns { display: flex; gap: 5px; }
+        .edit-btn { background-color: var(--edit); color: white; border: none; padding: 6px 10px; border-radius: 5px; cursor: pointer; font-size: 12px; font-weight: bold; }
         .delete-btn { background-color: #ff4d4d; color: white; border: none; padding: 6px 10px; border-radius: 5px; cursor: pointer; font-size: 12px; font-weight: bold; }
-        .delete-btn:hover { background-color: #cc0000; }
         
         .chart-container { position: relative; height: 300px; width: 100%; }
 
-        /* 照片放大視窗 (Modal) */
         .modal { display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.8); align-items: center; justify-content: center; }
         .modal-content { max-width: 90%; max-height: 90%; border-radius: 10px; border: 3px solid white; box-shadow: 0 0 20px rgba(0,0,0,0.5); }
         .close-btn { position: absolute; top: 15px; right: 25px; color: white; font-size: 35px; font-weight: bold; cursor: pointer; }
@@ -64,8 +64,8 @@
         <div id="info-content"></div>
     </div>
 
-    <div class="card">
-        <h3>📝 新增產檢紀錄</h3>
+    <div class="card" id="form-section">
+        <h3 id="form-title">📝 新增產檢紀錄</h3>
         <form id="record-form">
             <div class="form-row">
                 <div class="form-group">
@@ -88,14 +88,17 @@
                 </div>
             </div>
             <div class="form-group">
-                <label>📷 超音波照片 (選填)</label>
+                <label>📷 超音波照片 (若不更改請留空)</label>
                 <input type="file" id="photo" accept="image/*">
             </div>
             <div class="form-group">
                 <label>🩺 醫生備註</label>
                 <textarea id="notes" rows="2" placeholder="紀錄一下醫生的叮嚀或當下的心情..."></textarea>
             </div>
-            <button type="submit" class="save-btn">💾 儲存紀錄</button>
+            <div class="btn-group">
+                <button type="submit" id="submit-btn" class="save-btn">💾 儲存紀錄</button>
+                <button type="button" id="cancel-btn" class="cancel-btn" onclick="cancelEdit()">❌ 取消</button>
+            </div>
         </form>
     </div>
 
@@ -117,7 +120,8 @@
                         <th>頭圍(cm)</th>
                         <th>照片</th>
                         <th>備註</th>
-                        <th>操作</th> </tr>
+                        <th>操作</th>
+                    </tr>
                 </thead>
                 <tbody id="history-list"></tbody>
             </table>
@@ -131,18 +135,13 @@
 </div>
 
 <script>
-    // 取得資料
     let babyRecords = JSON.parse(localStorage.getItem('babyRecords')) || [];
     let growthChartInstance = null;
+    let editingId = null; // 🚀 新增：用來記錄現在正在編輯哪一筆資料
 
-    // 載入寶寶名字
     document.getElementById('baby-name').value = localStorage.getItem('babyName') || '大福寶';
+    function saveBabyName() { localStorage.setItem('babyName', document.getElementById('baby-name').value); }
 
-    function saveBabyName() {
-        localStorage.setItem('babyName', document.getElementById('baby-name').value);
-    }
-
-    // 衛教資訊資料庫
     function getHealthAdvice(week) {
         if (week <= 12) return "<b>👶 寶寶狀態：</b>主要器官正在成形，心跳已經可以聽到囉！<br><b>👩 媽咪建議：</b>處於第一孕期，可能會孕吐或疲倦。記得多休息，並持續補充「葉酸」。";
         if (week <= 28) return "<b>👶 寶寶狀態：</b>聽覺開始發展，骨骼變硬，媽咪會開始感受到明顯的胎動！<br><b>👩 媽咪建議：</b>進入第二孕期。可以開始跟寶寶說話，並補充「鈣質」與「鐵質」。";
@@ -150,15 +149,13 @@
         return "<b>👶 寶寶狀態：</b>隨時準備好要跟大福寶見面啦！<br><b>👩 媽咪建議：</b>保持放鬆心情，隨時注意產兆（落紅、破水、陣痛）。";
     }
 
-    // 處理照片壓縮
     function processImage(file, callback) {
-        if (!file) { callback(""); return; }
         const reader = new FileReader();
         reader.onload = function(e) {
             const img = new Image();
             img.onload = function() {
                 const canvas = document.createElement('canvas');
-                const MAX_WIDTH = 400; // 稍微調高畫質讓放大後更清楚
+                const MAX_WIDTH = 400; 
                 const scaleSize = MAX_WIDTH / img.width;
                 canvas.width = MAX_WIDTH;
                 canvas.height = img.height * scaleSize;
@@ -171,84 +168,128 @@
         reader.readAsDataURL(file);
     }
 
-    // 表單送出
+    // 表單送出 (現在支援「新增」與「更新」兩種模式)
     document.getElementById('record-form').addEventListener('submit', function(e) {
         e.preventDefault();
-        
         const fileInput = document.getElementById('photo');
-        processImage(fileInput.files[0], function(base64Image) {
-            const newRecord = {
-                id: Date.now(), // 給這筆紀錄一個唯一的身份證字號，方便之後刪除
+
+        // 建立一個處理儲存邏輯的函數
+        const saveData = (photoData) => {
+            const recordData = {
+                id: editingId ? editingId : Date.now(), // 如果在編輯就用原ID，否則產生新ID
                 date: document.getElementById('date').value,
                 week: parseInt(document.getElementById('week').value),
                 weight: document.getElementById('weight').value,
                 head: document.getElementById('head').value || '-',
                 notes: document.getElementById('notes').value,
-                photo: base64Image
+                photo: photoData
             };
 
-            babyRecords.push(newRecord);
+            if (editingId) {
+                // 🔄 更新模式：找到原本的資料並替換掉
+                const index = babyRecords.findIndex(r => r.id === editingId);
+                babyRecords[index] = recordData;
+                alert('✅ 紀錄更新成功！');
+            } else {
+                // ➕ 新增模式
+                babyRecords.push(recordData);
+                alert('✅ 紀錄儲存成功！');
+            }
+
+            // 重新排序、存檔、更新畫面，然後解除編輯模式
             babyRecords.sort((a, b) => a.week - b.week); 
             localStorage.setItem('babyRecords', JSON.stringify(babyRecords));
-
-            document.getElementById('record-form').reset();
+            cancelEdit(); 
             updateUI();
-        });
+        };
+
+        // 判斷是否有上傳新照片
+        if (fileInput.files[0]) {
+            processImage(fileInput.files[0], saveData);
+        } else {
+            // 如果沒上傳新照片
+            let existingPhoto = "";
+            if (editingId) {
+                // 編輯模式下，抓取舊照片
+                existingPhoto = babyRecords.find(r => r.id === editingId).photo;
+            }
+            saveData(existingPhoto);
+        }
     });
 
-    // ✨ 新增：刪除紀錄功能 ✨
-    function deleteRecord(recordId) {
-        // 跳出防呆確認視窗
-        const isConfirmed = confirm("確定要刪除這筆紀錄嗎？（刪除後無法復原喔）");
+    // ✨ 新增：啟動編輯模式 ✨
+    function editRecord(recordId) {
+        editingId = recordId; // 記住現在正在編輯哪一筆
+        const record = babyRecords.find(r => r.id === recordId); // 找資料
         
-        if (isConfirmed) {
-            // 過濾掉被刪除的那筆紀錄，保留其他的
+        // 將資料塞回輸入框
+        document.getElementById('date').value = record.date;
+        document.getElementById('week').value = record.week;
+        document.getElementById('weight').value = record.weight;
+        document.getElementById('head').value = record.head === '-' ? '' : record.head;
+        document.getElementById('notes').value = record.notes;
+        document.getElementById('photo').value = ''; // 清空檔案選擇器
+
+        // 改變 UI 外觀，提示正在編輯
+        document.getElementById('form-title').innerText = `✏️ 正在編輯 第 ${record.week} 週的紀錄`;
+        const submitBtn = document.getElementById('submit-btn');
+        submitBtn.innerText = '🔄 更新紀錄';
+        submitBtn.classList.add('edit-mode');
+        document.getElementById('cancel-btn').style.display = 'block';
+
+        // 平滑捲動到最上方表單處
+        document.getElementById('form-section').scrollIntoView({ behavior: 'smooth' });
+    }
+
+    // ✨ 新增：取消編輯模式 ✨
+    function cancelEdit() {
+        editingId = null;
+        document.getElementById('record-form').reset(); // 清空表單
+        
+        // 恢復 UI 外觀
+        document.getElementById('form-title').innerText = '📝 新增產檢紀錄';
+        const submitBtn = document.getElementById('submit-btn');
+        submitBtn.innerText = '💾 儲存紀錄';
+        submitBtn.classList.remove('edit-mode');
+        document.getElementById('cancel-btn').style.display = 'none';
+    }
+
+    function deleteRecord(recordId) {
+        if (confirm("確定要刪除這筆紀錄嗎？（刪除後無法復原喔）")) {
             babyRecords = babyRecords.filter(record => record.id !== recordId);
-            
-            // 重新存回瀏覽器
             localStorage.setItem('babyRecords', JSON.stringify(babyRecords));
             
-            // 更新畫面
+            // 如果正在編輯被刪除的這筆，要取消編輯模式
+            if (editingId === recordId) cancelEdit();
             updateUI();
         }
     }
 
-    // ✨ 新增：打開與關閉照片放大視窗 ✨
     function openModal(imageSrc) {
         document.getElementById('expandedImg').src = imageSrc;
-        document.getElementById('imageModal').style.display = 'flex'; // 顯示視窗
+        document.getElementById('imageModal').style.display = 'flex';
     }
+    function closeModal() { document.getElementById('imageModal').style.display = 'none'; }
 
-    function closeModal() {
-        document.getElementById('imageModal').style.display = 'none'; // 隱藏視窗
-    }
-
-    // 更新介面總管
     function updateUI() {
         renderTable();
         renderChart();
         updateHealthCard();
     }
 
-    // 更新衛教卡
     function updateHealthCard() {
         const card = document.getElementById('health-info');
-        if (babyRecords.length === 0) {
-            card.style.display = 'none';
-            return;
-        }
+        if (babyRecords.length === 0) { card.style.display = 'none'; return; }
         const latestRecord = babyRecords[babyRecords.length - 1]; 
         document.getElementById('info-week').innerText = latestRecord.week;
         document.getElementById('info-content').innerHTML = getHealthAdvice(latestRecord.week);
         card.style.display = 'block';
     }
 
-    // 繪製表格
     function renderTable() {
         const tbody = document.getElementById('history-list');
         tbody.innerHTML = ''; 
         babyRecords.forEach(record => {
-            // 注意這裡改成了 onclick="openModal(...)"
             const photoHtml = record.photo ? `<img src="${record.photo}" class="thumb" onclick="openModal('${record.photo}')" title="點擊放大">` : '無';
             const tr = document.createElement('tr');
             tr.innerHTML = `
@@ -257,18 +298,17 @@
                 <td>${record.head}</td>
                 <td>${photoHtml}</td>
                 <td>${record.notes || '-'}</td>
-                <td><button class="delete-btn" onclick="deleteRecord(${record.id})">刪除</button></td>
+                <td class="action-btns">
+                    <button class="edit-btn" onclick="editRecord(${record.id})">編輯</button>
+                    <button class="delete-btn" onclick="deleteRecord(${record.id})">刪除</button>
+                </td>
             `;
             tbody.appendChild(tr);
         });
     }
 
-    // 繪製雙軸圖表
     function renderChart() {
-        if (babyRecords.length === 0) {
-            if (growthChartInstance) growthChartInstance.destroy();
-            return;
-        }
+        if (babyRecords.length === 0) { if (growthChartInstance) growthChartInstance.destroy(); return; }
         const labels = babyRecords.map(r => `${r.week}W`);
         const weightData = babyRecords.map(r => r.weight);
         const headData = babyRecords.map(r => r.head === '-' ? null : r.head);
