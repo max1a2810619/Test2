@@ -3,63 +3,94 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>🍼 寶寶產檢紀錄小幫手</title>
+    <title>🍼 寶寶產檢紀錄小幫手 V2</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
-        :root { --primary: #ff8fa3; --bg: #fff0f3; --text: #590d22; --card-bg: #ffffff; }
-        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: var(--bg); color: var(--text); margin: 0; padding: 20px; line-height: 1.6; }
-        .container { max-width: 600px; margin: 0 auto; }
+        :root { --primary: #ff8fa3; --bg: #fff0f3; --text: #590d22; --card-bg: #ffffff; --blue: #4ea8de; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: var(--bg); color: var(--text); margin: 0; padding: 15px; line-height: 1.6; }
+        .container { max-width: 650px; margin: 0 auto; }
         
-        /* 標題與卡片設計 */
-        h1 { text-align: center; color: var(--primary); }
-        .card { background: var(--card-bg); padding: 20px; border-radius: 15px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); margin-bottom: 20px; border: 2px solid #ffb3c1; }
+        h1 { text-align: center; color: var(--primary); font-size: 24px; }
+        .card { background: var(--card-bg); padding: 18px; border-radius: 15px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); margin-bottom: 20px; border: 2px solid #ffb3c1; }
         
-        /* 表單輸入區 */
-        .form-group { margin-bottom: 15px; }
-        label { display: block; font-weight: bold; margin-bottom: 5px; }
-        input, textarea { width: 100%; padding: 10px; border: 1px solid #ffccd5; border-radius: 8px; box-sizing: border-box; font-size: 16px; }
-        button { background-color: var(--primary); color: white; border: none; padding: 12px 20px; width: 100%; border-radius: 8px; font-size: 16px; font-weight: bold; cursor: pointer; transition: 0.3s; }
+        /* 寶寶名字輸入 */
+        .name-input { text-align: center; margin-bottom: 15px; }
+        .name-input input { font-size: 20px; text-align: center; border: none; border-bottom: 2px dashed var(--primary); background: transparent; color: var(--primary); font-weight: bold; outline: none; width: 200px; }
+        .name-input input::placeholder { color: #ffccd5; }
+
+        /* 表單設計 */
+        .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 15px; }
+        .form-group { margin-bottom: 10px; }
+        label { display: block; font-weight: bold; margin-bottom: 5px; font-size: 14px; }
+        input, textarea { width: 100%; padding: 8px; border: 1px solid #ffccd5; border-radius: 8px; box-sizing: border-box; font-size: 14px; }
+        button { background-color: var(--primary); color: white; border: none; padding: 12px; width: 100%; border-radius: 8px; font-size: 16px; font-weight: bold; cursor: pointer; }
         button:hover { background-color: #ff4d6d; }
 
-        /* 歷史紀錄表格 */
-        table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 14px; }
-        th, td { padding: 10px; text-align: left; border-bottom: 1px solid #ffccd5; }
-        th { background-color: #ffb3c1; color: var(--text); }
+        /* 衛教小卡 */
+        .info-card { background-color: #fff9fa; border-left: 5px solid var(--primary); padding: 15px; border-radius: 8px; margin-bottom: 20px; font-size: 14px; }
+        .info-title { font-weight: bold; color: var(--primary); font-size: 16px; margin-bottom: 8px; }
+
+        /* 表格設計 */
+        .table-wrapper { overflow-x: auto; }
+        table { width: 100%; border-collapse: collapse; font-size: 13px; min-width: 500px; }
+        th, td { padding: 8px; text-align: left; border-bottom: 1px solid #ffccd5; vertical-align: middle; }
+        th { background-color: #ffb3c1; color: var(--text); white-space: nowrap; }
+        .thumb { width: 50px; height: 50px; object-fit: cover; border-radius: 5px; border: 1px solid #ffccd5; cursor: pointer; }
         
-        /* 圖表容器 */
         .chart-container { position: relative; height: 300px; width: 100%; }
     </style>
 </head>
 <body>
 
 <div class="container">
-    <h1>🍼 寶寶產檢紀錄小幫手</h1>
+    <h1>🍼 專屬產檢紀錄本</h1>
+    
+    <div class="name-input">
+        <input type="text" id="baby-name" placeholder="點此輸入寶寶小名" onchange="saveBabyName()">
+    </div>
+
+    <div class="info-card" id="health-info" style="display: none;">
+        <div class="info-title">💡 本週寶寶與媽咪狀態 (<span id="info-week"></span>週)</div>
+        <div id="info-content"></div>
+    </div>
 
     <div class="card">
         <h3>📝 新增產檢紀錄</h3>
         <form id="record-form">
-            <div class="form-group">
-                <label>📅 產檢日期</label>
-                <input type="date" id="date" required>
+            <div class="form-row">
+                <div class="form-group">
+                    <label>📅 日期</label>
+                    <input type="date" id="date" required>
+                </div>
+                <div class="form-group">
+                    <label>🤰 週數 (週)</label>
+                    <input type="number" id="week" placeholder="例如: 20" required>
+                </div>
+            </div>
+            <div class="form-row">
+                <div class="form-group">
+                    <label>⚖️ 體重 (克)</label>
+                    <input type="number" id="weight" placeholder="預估體重" required>
+                </div>
+                <div class="form-group">
+                    <label>📏 頭圍 (公分)</label>
+                    <input type="number" step="0.1" id="head" placeholder="BPD 頭骨橫徑">
+                </div>
             </div>
             <div class="form-group">
-                <label>🤰 懷孕週數 (例如: 12, 20)</label>
-                <input type="number" id="week" placeholder="請輸入週數" required>
-            </div>
-            <div class="form-group">
-                <label>⚖️ 寶寶體重 (克)</label>
-                <input type="number" id="weight" placeholder="請輸入體重(克)" required>
+                <label>📷 超音波照片 (選填)</label>
+                <input type="file" id="photo" accept="image/*">
             </div>
             <div class="form-group">
                 <label>🩺 醫生備註</label>
-                <textarea id="notes" rows="2" placeholder="例如：寶寶心跳正常、頭圍正常..."></textarea>
+                <textarea id="notes" rows="2" placeholder="紀錄一下醫生的叮嚀或當下的心情..."></textarea>
             </div>
             <button type="submit">💾 儲存紀錄</button>
         </form>
     </div>
 
     <div class="card">
-        <h3>📈 寶寶體重成長曲線</h3>
+        <h3>📈 生長曲線 (體重 & 頭圍)</h3>
         <div class="chart-container">
             <canvas id="growthChart"></canvas>
         </div>
@@ -67,122 +98,169 @@
 
     <div class="card">
         <h3>📋 歷史紀錄</h3>
-        <table>
-            <thead>
-                <tr>
-                    <th>日期</th>
-                    <th>週數</th>
-                    <th>體重(g)</th>
-                    <th>備註</th>
-                </tr>
-            </thead>
-            <tbody id="history-list">
-                </tbody>
-        </table>
+        <div class="table-wrapper">
+            <table>
+                <thead>
+                    <tr>
+                        <th>週數</th>
+                        <th>體重(g)</th>
+                        <th>頭圍(cm)</th>
+                        <th>照片</th>
+                        <th>備註</th>
+                    </tr>
+                </thead>
+                <tbody id="history-list"></tbody>
+            </table>
+        </div>
     </div>
 </div>
 
 <script>
-    // 變數設定：取得過去儲存的資料，如果沒有就預設為空陣列
+    // 取得資料
     let babyRecords = JSON.parse(localStorage.getItem('babyRecords')) || [];
-    let growthChartInstance = null; // 用來記錄圖表實例
+    let growthChartInstance = null;
 
-    // 1. 處理表單送出
+    // 載入寶寶名字
+    document.getElementById('baby-name').value = localStorage.getItem('babyName') || '';
+
+    function saveBabyName() {
+        localStorage.setItem('babyName', document.getElementById('baby-name').value);
+    }
+
+    // 衛教資訊資料庫
+    function getHealthAdvice(week) {
+        if (week <= 12) return "<b>👶 寶寶狀態：</b>主要器官正在成形，心跳已經可以聽到囉！<br><b>👩 媽咪建議：</b>處於第一孕期，可能會孕吐或疲倦。記得多休息，並持續補充「葉酸」幫助寶寶神經發育。";
+        if (week <= 28) return "<b>👶 寶寶狀態：</b>聽覺開始發展，骨骼變硬，媽咪會開始感受到明顯的胎動！<br><b>👩 媽咪建議：</b>進入最舒適的第二孕期。可以開始跟寶寶說話，並補充「鈣質」與「鐵質」，也可安排適度的孕婦運動。";
+        if (week <= 40) return "<b>👶 寶寶狀態：</b>皮下脂肪快速增加，為出生做準備，胎動可能會因為空間變小而改變方式。<br><b>👩 媽咪建議：</b>第三孕期肚子變大，容易腰痠、頻尿。請注意胎動次數，並可以開始準備待產包囉！";
+        return "<b>👶 寶寶狀態：</b>隨時準備好要跟媽咪見面啦！<br><b>👩 媽咪建議：</b>保持放鬆心情，隨時注意產兆（落紅、破水、陣痛）。";
+    }
+
+    // 處理照片壓縮 (避免 localStorage 爆滿)
+    function processImage(file, callback) {
+        if (!file) { callback(""); return; }
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            const img = new Image();
+            img.onload = function() {
+                const canvas = document.createElement('canvas');
+                const MAX_WIDTH = 300; // 壓縮寬度
+                const scaleSize = MAX_WIDTH / img.width;
+                canvas.width = MAX_WIDTH;
+                canvas.height = img.height * scaleSize;
+                const ctx = canvas.getContext('2d');
+                ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+                callback(canvas.toDataURL('image/jpeg', 0.6)); // 壓縮品質 60%
+            }
+            img.src = e.target.result;
+        }
+        reader.readAsDataURL(file);
+    }
+
+    // 表單送出
     document.getElementById('record-form').addEventListener('submit', function(e) {
-        e.preventDefault(); // 防止網頁重新載入
+        e.preventDefault();
+        
+        const fileInput = document.getElementById('photo');
+        processImage(fileInput.files[0], function(base64Image) {
+            const newRecord = {
+                id: Date.now(),
+                date: document.getElementById('date').value,
+                week: parseInt(document.getElementById('week').value),
+                weight: document.getElementById('weight').value,
+                head: document.getElementById('head').value || '-',
+                notes: document.getElementById('notes').value,
+                photo: base64Image
+            };
 
-        // 取得輸入的值
-        const newRecord = {
-            id: Date.now(), // 給予一個獨一無二的編號
-            date: document.getElementById('date').value,
-            week: document.getElementById('week').value,
-            weight: document.getElementById('weight').value,
-            notes: document.getElementById('notes').value
-        };
+            babyRecords.push(newRecord);
+            babyRecords.sort((a, b) => a.week - b.week); // 依週數排序
+            localStorage.setItem('babyRecords', JSON.stringify(babyRecords));
 
-        // 加入到陣列中並依照週數排序
-        babyRecords.push(newRecord);
-        babyRecords.sort((a, b) => a.week - b.week);
-
-        // 儲存到瀏覽器的 localStorage
-        localStorage.setItem('babyRecords', JSON.stringify(babyRecords));
-
-        // 清空表單
-        this.reset();
-
-        // 重新繪製畫面
-        updateUI();
-        alert('✅ 紀錄儲存成功！');
+            document.getElementById('record-form').reset();
+            updateUI();
+            alert('✅ 紀錄與照片儲存成功！');
+        });
     });
 
-    // 2. 更新畫面 (表格與圖表)
+    // 更新介面
     function updateUI() {
         renderTable();
         renderChart();
+        updateHealthCard();
     }
 
-    // 3. 繪製歷史紀錄表格
+    // 更新衛教卡
+    function updateHealthCard() {
+        if (babyRecords.length === 0) return;
+        const latestRecord = babyRecords[babyRecords.length - 1]; // 取週數最大的
+        const card = document.getElementById('health-info');
+        document.getElementById('info-week').innerText = latestRecord.week;
+        document.getElementById('info-content').innerHTML = getHealthAdvice(latestRecord.week);
+        card.style.display = 'block';
+    }
+
+    // 繪製表格
     function renderTable() {
         const tbody = document.getElementById('history-list');
-        tbody.innerHTML = ''; // 先清空舊資料
-
+        tbody.innerHTML = ''; 
         babyRecords.forEach(record => {
+            const photoHtml = record.photo ? `<img src="${record.photo}" class="thumb" onclick="window.open('${record.photo}')" title="點擊放大">` : '無';
             const tr = document.createElement('tr');
             tr.innerHTML = `
-                <td>${record.date}</td>
                 <td>第 ${record.week} 週</td>
                 <td><b>${record.weight}</b></td>
+                <td>${record.head}</td>
+                <td>${photoHtml}</td>
                 <td>${record.notes || '-'}</td>
             `;
             tbody.appendChild(tr);
         });
     }
 
-    // 4. 繪製 Chart.js 生長曲線圖
+    // 繪製雙軸圖表
     function renderChart() {
-        // 如果還沒有資料，就不畫圖
         if (babyRecords.length === 0) return;
-
-        // 準備給圖表的資料 (X軸是週數，Y軸是體重)
-        const labels = babyRecords.map(r => `第 ${r.week} 週`);
-        const dataPoints = babyRecords.map(r => r.weight);
+        const labels = babyRecords.map(r => `${r.week}W`);
+        const weightData = babyRecords.map(r => r.weight);
+        const headData = babyRecords.map(r => r.head === '-' ? null : r.head);
 
         const ctx = document.getElementById('growthChart').getContext('2d');
+        if (growthChartInstance) growthChartInstance.destroy();
 
-        // 如果圖表已經存在，先摧毀舊的才能畫新的 (避免重疊閃爍)
-        if (growthChartInstance) {
-            growthChartInstance.destroy();
-        }
-
-        // 建立新圖表
         growthChartInstance = new Chart(ctx, {
-            type: 'line', // 折線圖
+            type: 'line',
             data: {
                 labels: labels,
-                datasets: [{
-                    label: '寶寶體重 (克)',
-                    data: dataPoints,
-                    borderColor: '#ff4d6d',
-                    backgroundColor: 'rgba(255, 77, 109, 0.2)',
-                    borderWidth: 3,
-                    pointBackgroundColor: '#ff4d6d',
-                    pointRadius: 5,
-                    fill: true, // 曲線下方填滿顏色
-                    tension: 0.3 // 讓曲線變平滑
-                }]
+                datasets: [
+                    {
+                        label: '體重 (g)',
+                        data: weightData,
+                        borderColor: '#ff4d6d',
+                        backgroundColor: 'rgba(255, 77, 109, 0.1)',
+                        yAxisID: 'y', // 對應左邊 Y 軸
+                        tension: 0.3, fill: true, pointRadius: 5
+                    },
+                    {
+                        label: '頭圍 (cm)',
+                        data: headData,
+                        borderColor: '#4ea8de', // 藍色線條區分
+                        backgroundColor: '#4ea8de',
+                        yAxisID: 'y1', // 對應右邊 Y 軸
+                        tension: 0.3, fill: false, pointRadius: 5, pointStyle: 'rectRot'
+                    }
+                ]
             },
             options: {
-                responsive: true,
-                maintainAspectRatio: false,
+                responsive: true, maintainAspectRatio: false,
                 scales: {
-                    y: { beginAtZero: true, title: { display: true, text: '體重 (g)' } },
-                    x: { title: { display: true, text: '懷孕週數' } }
+                    x: { title: { display: true, text: '週數' } },
+                    y: { type: 'linear', display: true, position: 'left', title: { display: true, text: '體重(g)' } },
+                    y1: { type: 'linear', display: true, position: 'right', title: { display: true, text: '頭圍(cm)' }, grid: { drawOnChartArea: false } }
                 }
             }
         });
     }
 
-    // 網頁載入時，馬上繪製已有的資料
     updateUI();
 </script>
 
