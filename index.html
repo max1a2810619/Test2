@@ -46,7 +46,7 @@
     <h1>🍼 專屬產檢紀錄本</h1>
     
     <div class="name-input">
-        <input type="text" id="baby-name" placeholder="點此輸入寶寶小名" onchange="saveBabyName()">
+        <input type="text" id="baby-name" placeholder="點此輸入寶寶小名" value="大福寶" onchange="saveBabyName()">
     </div>
 
     <div class="info-card" id="health-info" style="display: none;">
@@ -120,8 +120,8 @@
     let babyRecords = JSON.parse(localStorage.getItem('babyRecords')) || [];
     let growthChartInstance = null;
 
-    // 載入寶寶名字
-    document.getElementById('baby-name').value = localStorage.getItem('babyName') || '';
+    // 載入寶寶名字，如果瀏覽器沒存過，就預設給 '大福寶'
+    document.getElementById('baby-name').value = localStorage.getItem('babyName') || '大福寶';
 
     function saveBabyName() {
         localStorage.setItem('babyName', document.getElementById('baby-name').value);
@@ -132,10 +132,10 @@
         if (week <= 12) return "<b>👶 寶寶狀態：</b>主要器官正在成形，心跳已經可以聽到囉！<br><b>👩 媽咪建議：</b>處於第一孕期，可能會孕吐或疲倦。記得多休息，並持續補充「葉酸」幫助寶寶神經發育。";
         if (week <= 28) return "<b>👶 寶寶狀態：</b>聽覺開始發展，骨骼變硬，媽咪會開始感受到明顯的胎動！<br><b>👩 媽咪建議：</b>進入最舒適的第二孕期。可以開始跟寶寶說話，並補充「鈣質」與「鐵質」，也可安排適度的孕婦運動。";
         if (week <= 40) return "<b>👶 寶寶狀態：</b>皮下脂肪快速增加，為出生做準備，胎動可能會因為空間變小而改變方式。<br><b>👩 媽咪建議：</b>第三孕期肚子變大，容易腰痠、頻尿。請注意胎動次數，並可以開始準備待產包囉！";
-        return "<b>👶 寶寶狀態：</b>隨時準備好要跟媽咪見面啦！<br><b>👩 媽咪建議：</b>保持放鬆心情，隨時注意產兆（落紅、破水、陣痛）。";
+        return "<b>👶 寶寶狀態：</b>隨時準備好要跟大福寶見面啦！<br><b>👩 媽咪建議：</b>保持放鬆心情，隨時注意產兆（落紅、破水、陣痛）。";
     }
 
-    // 處理照片壓縮 (避免 localStorage 爆滿)
+    // 處理照片壓縮
     function processImage(file, callback) {
         if (!file) { callback(""); return; }
         const reader = new FileReader();
@@ -143,13 +143,13 @@
             const img = new Image();
             img.onload = function() {
                 const canvas = document.createElement('canvas');
-                const MAX_WIDTH = 300; // 壓縮寬度
+                const MAX_WIDTH = 300; 
                 const scaleSize = MAX_WIDTH / img.width;
                 canvas.width = MAX_WIDTH;
                 canvas.height = img.height * scaleSize;
                 const ctx = canvas.getContext('2d');
                 ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-                callback(canvas.toDataURL('image/jpeg', 0.6)); // 壓縮品質 60%
+                callback(canvas.toDataURL('image/jpeg', 0.6)); 
             }
             img.src = e.target.result;
         }
@@ -173,7 +173,7 @@
             };
 
             babyRecords.push(newRecord);
-            babyRecords.sort((a, b) => a.week - b.week); // 依週數排序
+            babyRecords.sort((a, b) => a.week - b.week); 
             localStorage.setItem('babyRecords', JSON.stringify(babyRecords));
 
             document.getElementById('record-form').reset();
@@ -192,7 +192,7 @@
     // 更新衛教卡
     function updateHealthCard() {
         if (babyRecords.length === 0) return;
-        const latestRecord = babyRecords[babyRecords.length - 1]; // 取週數最大的
+        const latestRecord = babyRecords[babyRecords.length - 1]; 
         const card = document.getElementById('health-info');
         document.getElementById('info-week').innerText = latestRecord.week;
         document.getElementById('info-content').innerHTML = getHealthAdvice(latestRecord.week);
@@ -237,15 +237,15 @@
                         data: weightData,
                         borderColor: '#ff4d6d',
                         backgroundColor: 'rgba(255, 77, 109, 0.1)',
-                        yAxisID: 'y', // 對應左邊 Y 軸
+                        yAxisID: 'y', 
                         tension: 0.3, fill: true, pointRadius: 5
                     },
                     {
                         label: '頭圍 (cm)',
                         data: headData,
-                        borderColor: '#4ea8de', // 藍色線條區分
+                        borderColor: '#4ea8de', 
                         backgroundColor: '#4ea8de',
-                        yAxisID: 'y1', // 對應右邊 Y 軸
+                        yAxisID: 'y1', 
                         tension: 0.3, fill: false, pointRadius: 5, pointStyle: 'rectRot'
                     }
                 ]
