@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🍼 寶寶產檢紀錄小幫手</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        :root { --primary: #ff8fa3; --bg: #fff0f3; --text: #590d22; --card-bg: #ffffff; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: var(--bg); color: var(--text); margin: 0; padding: 20px; line-height: 1.6; }
+        .container { max-width: 600px; margin: 0 auto; }
+        
+        /* 標題與卡片設計 */
+        h1 { text-align: center; color: var(--primary); }
+        .card { background: var(--card-bg); padding: 20px; border-radius: 15px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); margin-bottom: 20px; border: 2px solid #ffb3c1; }
+        
+        /* 表單輸入區 */
+        .form-group { margin-bottom: 15px; }
+        label { display: block; font-weight: bold; margin-bottom: 5px; }
+        input, textarea { width: 100%; padding: 10px; border: 1px solid #ffccd5; border-radius: 8px; box-sizing: border-box; font-size: 16px; }
+        button { background-color: var(--primary); color: white; border: none; padding: 12px 20px; width: 100%; border-radius: 8px; font-size: 16px; font-weight: bold; cursor: pointer; transition: 0.3s; }
+        button:hover { background-color: #ff4d6d; }
+
+        /* 歷史紀錄表格 */
+        table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 14px; }
+        th, td { padding: 10px; text-align: left; border-bottom: 1px solid #ffccd5; }
+        th { background-color: #ffb3c1; color: var(--text); }
+        
+        /* 圖表容器 */
+        .chart-container { position: relative; height: 300px; width: 100%; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>🍼 寶寶產檢紀錄小幫手</h1>
+
+    <div class="card">
+        <h3>📝 新增產檢紀錄</h3>
+        <form id="record-form">
+            <div class="form-group">
+                <label>📅 產檢日期</label>
+                <input type="date" id="date" required>
+            </div>
+            <div class="form-group">
+                <label>🤰 懷孕週數 (例如: 12, 20)</label>
+                <input type="number" id="week" placeholder="請輸入週數" required>
+            </div>
+            <div class="form-group">
+                <label>⚖️ 寶寶體重 (克)</label>
+                <input type="number" id="weight" placeholder="請輸入體重(克)" required>
+            </div>
+            <div class="form-group">
+                <label>🩺 醫生備註</label>
+                <textarea id="notes" rows="2" placeholder="例如：寶寶心跳正常、頭圍正常..."></textarea>
+            </div>
+            <button type="submit">💾 儲存紀錄</button>
+        </form>
+    </div>
+
+    <div class="card">
+        <h3>📈 寶寶體重成長曲線</h3>
+        <div class="chart-container">
+            <canvas id="growthChart"></canvas>
+        </div>
+    </div>
+
+    <div class="card">
+        <h3>📋 歷史紀錄</h3>
+        <table>
+            <thead>
+                <tr>
+                    <th>日期</th>
+                    <th>週數</th>
+                    <th>體重(g)</th>
+                    <th>備註</th>
+                </tr>
+            </thead>
+            <tbody id="history-list">
+                </tbody>
+        </table>
+    </div>
+</div>
+
+<script>
+    // 變數設定：取得過去儲存的資料，如果沒有就預設為空陣列
+    let babyRecords = JSON.parse(localStorage.getItem('babyRecords')) || [];
+    let growthChartInstance = null; // 用來記錄圖表實例
+
+    // 1. 處理表單送出
+    document.getElementById('record-form').addEventListener('submit', function(e) {
+        e.preventDefault(); // 防止網頁重新載入
+
+        // 取得輸入的值
+        const newRecord = {
+            id: Date.now(), // 給予一個獨一無二的編號
+            date: document.getElementById('date').value,
+            week: document.getElementById('week').value,
+            weight: document.getElementById('weight').value,
+            notes: document.getElementById('notes').value
+        };
+
+        // 加入到陣列中並依照週數排序
+        babyRecords.push(newRecord);
+        babyRecords.sort((a, b) => a.week - b.week);
+
+        // 儲存到瀏覽器的 localStorage
+        localStorage.setItem('babyRecords', JSON.stringify(babyRecords));
+
+        // 清空表單
+        this.reset();
+
+        // 重新繪製畫面
+        updateUI();
+        alert('✅ 紀錄儲存成功！');
+    });
+
+    // 2. 更新畫面 (表格與圖表)
+    function updateUI() {
+        renderTable();
+        renderChart();
+    }
+
+    // 3. 繪製歷史紀錄表格
+    function renderTable() {
+        const tbody = document.getElementById('history-list');
+        tbody.innerHTML = ''; // 先清空舊資料
+
+        babyRecords.forEach(record => {
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+                <td>${record.date}</td>
+                <td>第 ${record.week} 週</td>
+                <td><b>${record.weight}</b></td>
+                <td>${record.notes || '-'}</td>
+            `;
+            tbody.appendChild(tr);
+        });
+    }
+
+    // 4. 繪製 Chart.js 生長曲線圖
+    function renderChart() {
+        // 如果還沒有資料，就不畫圖
+        if (babyRecords.length === 0) return;
+
+        // 準備給圖表的資料 (X軸是週數，Y軸是體重)
+        const labels = babyRecords.map(r => `第 ${r.week} 週`);
+        const dataPoints = babyRecords.map(r => r.weight);
+
+        const ctx = document.getElementById('growthChart').getContext('2d');
+
+        // 如果圖表已經存在，先摧毀舊的才能畫新的 (避免重疊閃爍)
+        if (growthChartInstance) {
+            growthChartInstance.destroy();
+        }
+
+        // 建立新圖表
+        growthChartInstance = new Chart(ctx, {
+            type: 'line', // 折線圖
+            data: {
+                labels: labels,
+                datasets: [{
+                    label: '寶寶體重 (克)',
+                    data: dataPoints,
+                    borderColor: '#ff4d6d',
+                    backgroundColor: 'rgba(255, 77, 109, 0.2)',
+                    borderWidth: 3,
+                    pointBackgroundColor: '#ff4d6d',
+                    pointRadius: 5,
+                    fill: true, // 曲線下方填滿顏色
+                    tension: 0.3 // 讓曲線變平滑
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    y: { beginAtZero: true, title: { display: true, text: '體重 (g)' } },
+                    x: { title: { display: true, text: '懷孕週數' } }
+                }
+            }
+        });
+    }
+
+    // 網頁載入時，馬上繪製已有的資料
+    updateUI();
+</script>
+
+</body>
+</html>
